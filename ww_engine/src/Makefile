@@ -8,11 +8,11 @@ LDFLAGS := -L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/usr/lib/libnet-1.0.x/lib -l
 
 all: ww_engine
 
-ww_engine: printall.o
-	$(CC) $(LDFLAGS) printall.o -o ww_engine
+ww_engine: main.o
+	$(CC) $(LDFLAGS) main.o -o ww_engine
 
-ww_engine.o: printall.c
-	$(CC) $(CFLAGS) -c printall.c
+ww_engine.o: main.c
+	$(CC) $(CFLAGS) -c main.c
 
 clean:
 	rm -f *~ *.o
