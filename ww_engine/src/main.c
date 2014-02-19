@@ -8,6 +8,7 @@
 #include "nids.h"
 
 #define int_ntoa(x)	inet_ntoa(*((struct in_addr *)&x))
+int content_flag = 0;
 
 // struct tuple4 contains addresses and port numbers of the TCP connections
 // the following auxiliary function produces a string looking like
@@ -25,7 +26,8 @@ char * adres (struct tuple4 addr)
 void tcp_callback (struct tcp_stream *a_tcp, void ** this_time_not_needed)
 {
     char buf[1024];
-    strcpy (buf, adres (a_tcp->addr)); // we put conn params into buf
+    sprintf(buf, "=TCP=\t");
+    strcpy (buf + strlen(buf), adres (a_tcp->addr)); // we put conn params into buf
     if (a_tcp->nids_state == NIDS_JUST_EST)
     {
         // connection described by a_tcp is established
@@ -92,7 +94,8 @@ void tcp_callback (struct tcp_stream *a_tcp, void ** this_time_not_needed)
         // (saddr, daddr, sport, dport) accompanied
         // by data flow direction (-> or <-)
 
-        //write(2,hlf->data,hlf->count_new); // we print the newly arrived data
+        if (content_flag)
+            write(2,hlf->data,hlf->count_new); // we print the newly arrived data
     }
     return ;
 }
@@ -101,17 +104,21 @@ void udp_callback(struct tuple4 * addr, char *buf,  int len, struct ip *iph)
 {
     int i = 0;
     char buffer[1024];
-    sprintf(buffer + strlen("=UDP=") , "=UDP=");
-    strcpy(buffer, inet_ntoa(*((struct in_addr *) &(addr->saddr))));
-    sprintf(buffer + strlen(buffer) , ": %i ", addr->source);
+    sprintf(buffer, "=UDP=\t");
+    strcpy(buffer + strlen(buffer), inet_ntoa(*((struct in_addr *) &(addr->saddr))));
+    sprintf(buffer + strlen(buffer), ": %i ", addr->source);
     strcat(buffer, " -> ");
-    strcpy(buffer, inet_ntoa(*((struct in_addr *) &(addr->daddr))));
-    sprintf(buffer + strlen(buffer) , ": %i ", addr->dest);
-    strcat(buffer, "\n");
+    strcpy(buffer + strlen(buffer), inet_ntoa(*((struct in_addr *) &(addr->daddr))));
+    sprintf(buffer + strlen(buffer), ": %i ", addr->dest);
+    fprintf(stderr,"%s \n",buffer);
 }
 
-int main ()
+int main (int argc, char* argv[])
 {
+    if ( argc > 1) {
+        content_flag = 1;
+    }
+
     // here we can alter libnids params, for instance:
     // nids_params.n_hosts=256;
     nids_params.device = "br-lan";
@@ -120,8 +127,9 @@ int main ()
         fprintf(stderr,"%s\n",nids_errbuf);
         exit(1);
     }
+
     nids_register_tcp (tcp_callback);
-    nids_register_tcp (udp_callback);
+    nids_register_udp (udp_callback);
     nids_run ();
     return 0;
 }
