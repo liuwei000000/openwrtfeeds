@@ -16,7 +16,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/ww_engine
 	SECTION:=Detection Engine
 	CATEGORY:=Network
-	DEPENDS:=+libnids
+	DEPENDS:=+libnids +libstdcpp
 	TITLE:=ww_engine
 	MAINTAINER:=liuwei
 endef
@@ -29,16 +29,6 @@ define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
 	$(CP) ./src/* $(PKG_BUILD_DIR)/
 endef
-
-#define Build/Compile
-#	$(MAKE) -C $(PKG_BUILD_DIR)
-#	-$(TARGET_CONFIGURE_OPTS) \
-#		-CC="$(TARGET_CC)" LD="$(TARGET_CC)" CFLAGS="-c $(TARGET_CFLAGS)"
-#		LDFLAGS= \
-#		PCAP_H="$(TARGET_CPPFLAGS)" \
-#		NIDS_H="$(TARGET_CPPFLAGS) -I$(STAGING_DIR)/usr/lib/libnet-1.0.x/include" \
-#		NIDS_L="$(TARGET_LDFLAGS) -L$(STAGING_DIR)/usr/lib/libnet-1.0.x/lib -lnids -lnet -lpcap" libnids
-#endef
 
 define Package/ww_engine/install
 	$(INSTALL_DIR) $(1)/bin/

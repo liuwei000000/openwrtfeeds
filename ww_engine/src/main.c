@@ -8,8 +8,10 @@
 #include "nids.h"
 
 #define DEBUG(a...) fprintf(stderr, ##a);
-
 #define int_ntoa(x)	inet_ntoa(*((struct in_addr *)&x))
+extern int check_init();
+extern int check_proc(char *data, size_t len);
+
 int content_flag = 0;
 
 // 10.0.0.1,1024,10.0.0.2,23
@@ -50,6 +52,9 @@ void tcp_callback (struct tcp_stream *a_tcp, void ** this_time_not_needed)
     if (a_tcp->nids_state == NIDS_DATA)
     {
         struct half_stream *hlf;
+        a_tcp->client.collect--;
+        a_tcp->server.collect--;
+
         if (a_tcp->server.count_new_urg)
         {
             // new byte of urgent data has arrived 
@@ -70,6 +75,7 @@ void tcp_callback (struct tcp_stream *a_tcp, void ** this_time_not_needed)
         fprintf(stderr,"%s \n",buf);
         if (content_flag)
             write(2,hlf->data,hlf->count_new); // we print the newly arrived data
+        check_proc(hlf->data, hlf->count_new);
     }
     return ;
 }
@@ -95,12 +101,15 @@ int main (int argc, char* argv[])
     // here we can alter libnids params, for instance:
     // nids_params.n_hosts=256;
     nids_params.device = "br-lan";
+    nids_params.pcap_filter = "tcp port 80";
+
     if (!nids_init ())
     {
         fprintf(stderr,"%s\n",nids_errbuf);
         return 1;
     }
 
+    check_init();
     nids_register_tcp (tcp_callback);
     //nids_register_udp (udp_callback);
     nids_run ();
