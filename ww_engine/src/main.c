@@ -7,7 +7,8 @@
 #include <stdio.h>
 #include "nids.h"
 
-#define DEBUG(a...) fprintf(stderr, ##a);
+//#define DEBUG(a...) fprintf(stderr, ##a);
+#define DEBUG(a...)             //
 #define int_ntoa(x)	inet_ntoa(*((struct in_addr *)&x))
 extern int check_init();
 extern int check_proc(char *data, size_t len);
@@ -58,10 +59,10 @@ void tcp_callback (struct tcp_stream *a_tcp, void ** this_time_not_needed)
         if (a_tcp->server.count_new_urg)
         {
             // new byte of urgent data has arrived 
-            strcat(buf,"(urgent->)");
-            buf[strlen(buf)+1]=0;
-            buf[strlen(buf)]=a_tcp->server.urgdata;
-            write(1,buf,strlen(buf));
+//            strcat(buf,"(urgent->)");
+//            buf[strlen(buf)+1]=0;
+//            buf[strlen(buf)]= a_tcp->server.urgdata;
+//            write(1,buf,strlen(buf));
             return;
         }
         if (a_tcp->client.count_new)
@@ -72,9 +73,7 @@ void tcp_callback (struct tcp_stream *a_tcp, void ** this_time_not_needed)
             hlf = &a_tcp->server; // analogical
             strcat (buf, "(->)");
         }
-        fprintf(stderr,"%s \n",buf);
-        if (content_flag)
-            write(2,hlf->data,hlf->count_new); // we print the newly arrived data
+        DEBUG("%s \n",buf);
         check_proc(hlf->data, hlf->count_new);
     }
     return ;
