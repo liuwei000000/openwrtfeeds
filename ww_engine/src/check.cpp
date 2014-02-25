@@ -2,6 +2,9 @@
 #include "check.h"
 #include <string.h>
 
+//#define DEBUG(a...) fprintf(stderr, ##a);
+#define DEBUG(a...)             //
+
 Check check;
 extern "C" int check_init()
 {
@@ -12,6 +15,7 @@ extern "C" int check_init()
 extern "C" int check_proc(char *data, size_t len)
 {
     check.parse_http(data, len);
+    check.process();
     return 1;
 }
 
@@ -36,22 +40,28 @@ set<string> split(string str, string pattern)
     return result;
 }
 
-
 bool Check::init_conf()
 {
+    DEBUG("init_conf");
     string t, strs;
-    ifstream conf("./default.conf");
+    ifstream conf("/etc/ww_engine.conf");
 
+    conf >> frequency;
     conf >> t;
-    if (t != "match" ) return false;
-    conf >> strs;
-    subs = split(strs, ",");
-    conf >> strs;
-    fulls = split(strs, ",");
-
+    while ( t != "0" ) {
+        check_entry     e;
+        if (t == HOST ) {
+            conf >> strs;
+            e.subs = split(strs, ",");
+            conf >> strs;
+            e.fulls = split(strs, ",");
+            cout << e.log << endl;
+            check_hosts.push_back(e);
+        }
+        conf >> t;
+    }
+    DEBUG("init finish");
     return true;
-
-    //strs
 }
 
 void Check::parse_http(const char *data, size_t len)
@@ -61,7 +71,7 @@ void Check::parse_http(const char *data, size_t len)
     size_t l = 0;
 
     ptr = data;
-    for ( int i = 0; i < len; i++ ) {
+    for ( size_t i = 0; i < len; i++ ) {
         if ( !(data[i] == 0x0d && data[i+1] == 0x0a)) {
             n++;
             continue;
@@ -160,7 +170,30 @@ void Check::parse_http(const char *data, size_t len)
     printf("== N == %s\n", a);
 }
 
+
+void Check::process()
+{
+    process_http();
+}
+
+
+void Check::process_http()
+{
+    for ( unsigned int i = 0; i < check_hosts.size(); i++ ) {
+        set<string>::const_iterator it;
+        for (it = check_hosts[i].fulls.begin(); it != check_hosts[i].fulls.end(); ++it) {
+            unsigned int l = it->size() > host.len ? host.len : it->size();
+            if (! memcmp(host.ptr, it->c_str(), l)) {
+                //时间
+                printf("%s \n", check_hosts[i].log.c_str());
+            }
+        }
+
+    }
+}
+
 static const char str[] = "GET / HTTP/1.1\r\nHost: www.baidu.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Encoding: gzip, deflate\r\nCookie: bdshare_firstime=1388495114171; BAIDUID=6686D56DD5D0B7476A84634453D97457:FG=1; Hm_lvt_9f14aaa038bbba8b12ec2a4a3e51d254=1392544674; cflag=65535:1; H_PS_TIPFLAG=; H_PS_TIPCOUNT=5; BD_CK_SAM=1; shifen[104049791_63132]=1392696400; BDRCVFR[gltLrB7qNCt]=mk3SLVN4HKm; H_PS_PSSID=4851_5138_1466_5186_5207_51\r\nConnection: keep-alive\r\n\r\n";
+
 
 int main_t()
 {
