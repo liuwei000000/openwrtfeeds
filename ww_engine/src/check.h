@@ -19,6 +19,7 @@ typedef struct {
     set<string>     subs;
     set<string>     fulls;
     string          log;
+    time_t          out_sec;
 } check_entry;
 
 class Check {

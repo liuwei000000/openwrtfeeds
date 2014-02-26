@@ -55,7 +55,7 @@ bool Check::init_conf()
             e.subs = split(strs, ",");
             conf >> strs;
             e.fulls = split(strs, ",");
-            cout << e.log << endl;
+            conf >> e.log;
             check_hosts.push_back(e);
         }
         conf >> t;
@@ -170,25 +170,37 @@ void Check::parse_http(const char *data, size_t len)
     printf("== N == %s\n", a);
 }
 
-
 void Check::process()
 {
     process_http();
 }
 
-
 void Check::process_http()
 {
+    time_t t = time((time_t*)NULL);
     for ( unsigned int i = 0; i < check_hosts.size(); i++ ) {
         set<string>::const_iterator it;
         for (it = check_hosts[i].fulls.begin(); it != check_hosts[i].fulls.end(); ++it) {
             unsigned int l = it->size() > host.len ? host.len : it->size();
-            if (! memcmp(host.ptr, it->c_str(), l)) {
+            //full
+            if (! memcmp(host.ptr, it->c_str(), l) &&  check_hosts[i].out_sec != t / (time_t)frequency) {
                 //时间
+                check_hosts[i].out_sec = t / (time_t)frequency;
                 printf("%s \n", check_hosts[i].log.c_str());
             }
         }
+        char s[1024];
+        memcpy(s, host.ptr, host.len);
+        s[host.len] = '\0';
 
+        for (it = check_hosts[i].subs.begin(); it != check_hosts[i].subs.end(); ++it) {
+            // sub
+            if (strstr(s, it->c_str()) != NULL &&  check_hosts[i].out_sec != t / (time_t)frequency) {
+                //时间
+                check_hosts[i].out_sec = t / (time_t)frequency;
+                printf("%s \n", check_hosts[i].log.c_str());
+            }
+        }
     }
 }
 
