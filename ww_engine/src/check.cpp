@@ -167,7 +167,7 @@ void Check::parse_http(const char *data, size_t len)
     char a[1024];
     memcpy(a, host.ptr, host.len);
     a[host.len] = '\0';
-    printf("== N == %s\n", a);
+    printf("host: %s\n", a);
 }
 
 void Check::process()
