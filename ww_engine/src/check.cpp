@@ -1,9 +1,11 @@
 #include <arpa/inet.h>
 #include "check.h"
 #include <string.h>
+#include <stdlib.h>
 
-//#define DEBUG(a...) fprintf(stderr, ##a);
-#define DEBUG(a...)             //
+#define DEBUG(a...) fprintf(stderr, ##a);
+//#define DEBUG(a...)             //
+#define ERROR(a...)    fprintf(stderr, ##a)
 
 Check check;
 extern "C" int check_init()
@@ -19,11 +21,25 @@ extern "C" int check_proc(char *data, size_t len)
     return 1;
 }
 
+static string& trim(string &s)
+{
+    if (s.empty()) {
+        return s;
+    }
+    s.erase(0,s.find_first_not_of(" "));
+    s.erase(s.find_last_not_of(" ") + 1);
+    s.erase(0,s.find_first_not_of("\t"));
+    s.erase(s.find_last_not_of("\t") + 1);
+    return s;
+}
+
+
 //字符串分割函数
 set<string> split(string str, string pattern)
 {
     string::size_type pos;
     set<string> result;
+    if (str.empty()) return result;
     str+=pattern;//扩展字符串以方便操作
     string::size_type size=str.size();
 
@@ -33,6 +49,7 @@ set<string> split(string str, string pattern)
         if(pos<size)
         {
             string s=str.substr(i,pos-i);
+            s = trim(s);
             result.insert(s);
             i=pos+pattern.size()-1;
         }
@@ -40,27 +57,101 @@ set<string> split(string str, string pattern)
     return result;
 }
 
+bool set_val(const string &t, const string &key, string &val)
+{
+    if (t == key) return true;
+    if (t.size() > key.size() && !memcmp(t.c_str(), key.c_str(), key.size()) ) {
+        val = t.substr(key.size());
+        val = trim(val);
+        return true;
+    }
+    return false;
+}
+
 bool Check::init_conf()
 {
-    DEBUG("init_conf");
+    DEBUG("init_conf\n");
     string t, strs;
     ifstream conf("/etc/ww_engine.conf");
 
-    conf >> frequency;
-    conf >> t;
-    while ( t != "0" ) {
-        check_entry     e;
-        if (t == HOST ) {
-            conf >> strs;
-            e.subs = split(strs, ",");
-            conf >> strs;
-            e.fulls = split(strs, ",");
-            conf >> e.log;
-            check_hosts.push_back(e);
+    getline(conf,t);
+    bool rule_flag = false;
+    bool set_time = false;
+    while ( !conf.eof() ) {
+        DEBUG("read line| %s\n", t.c_str());
+        t = trim(t);
+        if ( !t.empty() && t[0] != '#' ) {
+            // 非空且不为注释
+            rule  r;
+            string tmp;
+            if (!set_time && set_val(t, "time:", tmp )) {
+                frequency = atoi(tmp.c_str());
+                DEBUG("time: %d\n", frequency);
+                set_time = true;
+            }
+
+            if (!rule_flag && set_val(t, "rule:", r.log ) ) {
+                rule_flag = true;
+                DEBUG("rule log: %s\n", r.log.c_str());
+            }
+            bool item_flag = false;
+            while (rule_flag && !conf.eof()) {
+                getline(conf,t);
+                DEBUG("rule read line| %s\n", t.c_str());
+                t = trim(t);
+                if ( !t.empty() && t[0] != '#' ) {
+                    DEBUG("do line ...\n");
+                    if ( !item_flag) {
+                        if (set_val(t, "rule_end", tmp)) {
+                            DEBUG("rule_end \n");
+                            rule_flag = false;
+                            rules.push_back(r);
+                            break;
+                        }
+                        if (!set_val(t , "item_start", tmp) ) {
+                            ERROR("must have rule_item\n");
+                            return false;
+                        }
+                        else {
+                            DEBUG("item start\n");
+                            item_flag = true;
+                            continue;
+                        }
+                    }
+                    rule_item ritem;
+                    if ( item_flag && set_val(t , "type:", ritem.type)) {
+                        DEBUG("type: %s\n", ritem.type.c_str());
+                        continue;
+                    }
+
+                    if ( item_flag && set_val(t , "sub:", tmp)) {
+                        DEBUG("subs:%s\n", tmp.c_str());
+                        ritem.subs = split(tmp, ",");
+                        continue;
+                    }
+
+                    if ( item_flag && set_val(t , "full:", tmp)) {
+                        DEBUG("fulls:%s\n", tmp.c_str());
+                        ritem.fulls = split(tmp, ",");
+                        continue;
+                    }
+
+                    if( item_flag && set_val(t, "item_end", tmp) ) {
+                        DEBUG("item_end \n");
+                        item_flag = false;
+                        r.rule_items.push_back(ritem);
+                        continue;
+                    }
+                }
+            }
         }
-        conf >> t;
+        getline(conf,t);
     }
-    DEBUG("init finish");
+    for (int i = 0; i < rules.size(); i++) {
+        DEBUG("%d rules item size:%d\n", i, rules[i].rule_items.size());
+    }
+    DEBUG("init finish\n");
+
     return true;
 }
 
@@ -175,33 +266,33 @@ void Check::process()
     process_http();
 }
 
-void Check::process_http()
+void Check::process_http( )
 {
-    time_t t = time((time_t*)NULL);
-    for ( unsigned int i = 0; i < check_hosts.size(); i++ ) {
-        set<string>::const_iterator it;
-        for (it = check_hosts[i].fulls.begin(); it != check_hosts[i].fulls.end(); ++it) {
-            unsigned int l = it->size() > host.len ? host.len : it->size();
-            //full
-            if (! memcmp(host.ptr, it->c_str(), l) &&  check_hosts[i].out_sec != t / (time_t)frequency) {
-                //时间
-                check_hosts[i].out_sec = t / (time_t)frequency;
-                printf("%s \n", check_hosts[i].log.c_str());
-            }
-        }
-        char s[1024];
-        memcpy(s, host.ptr, host.len);
-        s[host.len] = '\0';
-
-        for (it = check_hosts[i].subs.begin(); it != check_hosts[i].subs.end(); ++it) {
-            // sub
-            if (strstr(s, it->c_str()) != NULL &&  check_hosts[i].out_sec != t / (time_t)frequency) {
-                //时间
-                check_hosts[i].out_sec = t / (time_t)frequency;
-                printf("%s \n", check_hosts[i].log.c_str());
-            }
-        }
-    }
+//    time_t t = time((time_t*)NULL);
+//    for ( unsigned int i = 0; i < check_hosts.size(); i++ ) {
+//        set<string>::const_iterator it;
+//        for (it = check_hosts[i].fulls.begin(); it != check_hosts[i].fulls.end(); ++it) {
+//            unsigned int l = it->size() > host.len ? host.len : it->size();
+//            //full
+//            if (! memcmp(host.ptr, it->c_str(), l) &&  check_hosts[i].out_sec != t / (time_t)frequency) {
+//                //时间
+//                check_hosts[i].out_sec = t / (time_t)frequency;
+//                printf("%s \n", check_hosts[i].log.c_str());
+//            }
+//        }
+//        char s[1024];
+//        memcpy(s, host.ptr, host.len);
+//        s[host.len] = '\0';
+//
+//        for (it = check_hosts[i].subs.begin(); it != check_hosts[i].subs.end(); ++it) {
+//            // sub
+//            if (strstr(s, it->c_str()) != NULL &&  check_hosts[i].out_sec != t / (time_t)frequency) {
+//                //时间
+//                check_hosts[i].out_sec = t / (time_t)frequency;
+//                printf("%s \n", check_hosts[i].log.c_str());
+//            }
+//        }
+//    }
 }
 
 static const char str[] = "GET / HTTP/1.1\r\nHost: www.baidu.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Encoding: gzip, deflate\r\nCookie: bdshare_firstime=1388495114171; BAIDUID=6686D56DD5D0B7476A84634453D97457:FG=1; Hm_lvt_9f14aaa038bbba8b12ec2a4a3e51d254=1392544674; cflag=65535:1; H_PS_TIPFLAG=; H_PS_TIPCOUNT=5; BD_CK_SAM=1; shifen[104049791_63132]=1392696400; BDRCVFR[gltLrB7qNCt]=mk3SLVN4HKm; H_PS_PSSID=4851_5138_1466_5186_5207_51\r\nConnection: keep-alive\r\n\r\n";

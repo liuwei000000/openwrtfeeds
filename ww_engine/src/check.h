@@ -18,9 +18,15 @@ typedef struct {
 typedef struct {
     set<string>     subs;
     set<string>     fulls;
-    string          log;
-    time_t          out_sec;
-} check_entry;
+    string          type;
+} rule_item;
+
+typedef struct {
+    vector<rule_item>           rule_items;
+    string                      log;
+    time_t                      out_sec;
+    unsigned                    count;
+} rule;
 
 class Check {
     public:
@@ -44,7 +50,7 @@ class Check {
         void process_http();
 
     private:
-        vector<check_entry>             check_hosts;
+        vector<rule>                    rules;
 
         int                             frequency;
         ptr_string                      host;
