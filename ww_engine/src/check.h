@@ -8,7 +8,11 @@
 
 using namespace std;
 
-#define HOST    "host"
+#define HOST                    "host"
+#define CONTENT_TYPE            "content_type"
+#define USER_AGENT              "user_agent"
+#define USER_CLIENT             "user_clinet"
+#define REFER                   "refer"
 
 typedef struct {
     const char * ptr;
@@ -47,7 +51,7 @@ class Check {
         bool init_conf();
         void parse_http(const char *data, size_t len);
         void process();
-        void process_http();
+        bool process_http(ptr_string& http_header, const string &type, vector<rule_item>& item);
 
     private:
         vector<rule>                    rules;
@@ -63,7 +67,7 @@ class Check {
         ptr_string                      transfer_encoding;
         ptr_string                      content_length;
         ptr_string                      cookie;
-        ptr_string                      sessione_type;
+        ptr_string                      sessione_type;     
 };
 
 #endif
