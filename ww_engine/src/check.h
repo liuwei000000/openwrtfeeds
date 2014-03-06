@@ -50,7 +50,7 @@ class Check {
         ~Check() {};
         bool init_conf();
         void parse_http(const char *data, size_t len);
-        void process();
+        void process(char *source, char *dest);
         bool process_http(ptr_string& http_header, const string &type, vector<rule_item>& item);
 
     private:

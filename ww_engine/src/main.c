@@ -11,7 +11,7 @@
 #define DEBUG(a...)             //
 #define int_ntoa(x)	inet_ntoa(*((struct in_addr *)&x))
 extern int check_init();
-extern int check_proc(char *data, size_t len);
+extern int check_proc(char *data, size_t len, char *source, char *dest);
 
 int content_flag = 0;
 
@@ -74,7 +74,10 @@ void tcp_callback (struct tcp_stream *a_tcp, void ** this_time_not_needed)
             strcat (buf, "(->)");
         }
         DEBUG("%s \n",buf);
-        check_proc(hlf->data, hlf->count_new);
+        char souce[255], dest[255];
+        strcpy (souce, int_ntoa (a_tcp->addr.saddr));
+        strcpy (dest, int_ntoa (a_tcp->addr.daddr));
+        check_proc(hlf->data, hlf->count_new, souce, dest);
     }
     return ;
 }

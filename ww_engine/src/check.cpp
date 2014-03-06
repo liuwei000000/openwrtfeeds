@@ -3,8 +3,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define DEBUG(a...) fprintf(stderr, ##a);
-//#define DEBUG(a...)             //
+//#define DEBUG(a...)  fprintf(stderr, ##a);
+#define DEBUG(a...)             //
 #define ERROR(a...)    fprintf(stderr, ##a)
 
 Check check;
@@ -14,10 +14,10 @@ extern "C" int check_init()
     return rc;
 }
 
-extern "C" int check_proc(char *data, size_t len)
+extern "C" int check_proc(char *data, size_t len, char *source, char *dest)
 {
     check.parse_http(data, len);
-    check.process();
+    check.process(source, dest);
     return 1;
 }
 
@@ -92,6 +92,7 @@ bool Check::init_conf()
 
             if (!rule_flag && set_val(t, "rule:", r.log ) ) {
                 rule_flag = true;
+                r.count = 0;
                 DEBUG("rule log: %s\n", r.log.c_str());
             }
             bool item_flag = false;
@@ -267,17 +268,17 @@ void Check::parse_http(const char *data, size_t len)
         l = 0;
     }
 
-    char a[1024];
-    memcpy(a, host.ptr, host.len);
-    a[host.len] = '\0';
-    printf("host: %s\n", a);
-    memcpy(a, user_agent.ptr, user_agent.len);
-    a[user_agent.len] = '\0';
-    printf("user agent: %s\n", a);
-    printf("#####################\n");
+    //char a[1024];
+    //memcpy(a, host.ptr, host.len);
+    //a[host.len] = '\0';
+    //printf("host: %s\n", a);
+    //memcpy(a, user_agent.ptr, user_agent.len);
+    //a[user_agent.len] = '\0';
+    //printf("user agent: %s\n", a);
+    //printf("#####################\n");
 }
 
-void Check::process()
+void Check::process(char *source, char *dest)
 {
     time_t t = time((time_t*)NULL);
     for (size_t i = 0; i < rules.size(); ++i) {
@@ -302,17 +303,24 @@ void Check::process()
         //命中
         if ( rules[i].out_sec != t / (time_t)frequency) {
             rules[i].out_sec = t / (time_t)frequency;
-            printf("%s \n", rules[i].log.c_str());
+            printf("%s  |Count:%d | src: %s, des %s \n", rules[i].log.c_str(),
+                    rules[i].count, source, dest);
+            rules[i].count = 1;
+        } else {
+            rules[i].count++;
         }
     }
 }
 
 bool Check::process_http( ptr_string &http_header, const string &type, vector<rule_item> & items)
 {
-    if (!http_header.ptr) return true;
+    bool rt = true;
     if (items.empty()) return true;
     for (size_t i = 0; i < items.size(); ++i) {
         if ( items[i].type != type ) continue;
+        rt = false;
+
+        if (!http_header.ptr) return false;
         char s[1024];
         memcpy(s, http_header.ptr, http_header.len);
         s[http_header.len] = '\0';
@@ -336,7 +344,7 @@ bool Check::process_http( ptr_string &http_header, const string &type, vector<ru
             }
         }
     }
-    return false;
+    return rt;
 }
 
 static const char str[] = "GET / HTTP/1.1\r\nHost: www.baidu.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Encoding: gzip, deflate\r\nCookie: bdshare_firstime=1388495114171; BAIDUID=6686D56DD5D0B7476A84634453D97457:FG=1; Hm_lvt_9f14aaa038bbba8b12ec2a4a3e51d254=1392544674; cflag=65535:1; H_PS_TIPFLAG=; H_PS_TIPCOUNT=5; BD_CK_SAM=1; shifen[104049791_63132]=1392696400; BDRCVFR[gltLrB7qNCt]=mk3SLVN4HKm; H_PS_PSSID=4851_5138_1466_5186_5207_51\r\nConnection: keep-alive\r\n\r\n";
