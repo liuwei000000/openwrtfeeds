@@ -31,8 +31,12 @@ define Build/Prepare
 endef
 
 define Package/ww_engine/install
-	$(INSTALL_DIR) $(1)/bin/
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ww_engine $(1)/bin/ww_engine
+	$(INSTALL_DIR)  $(1)/bin/
+	$(INSTALL_DIR)  $(1)/etc/
+	$(INSTALL_DIR)  $(1)/etc/init.d/
+	$(INSTALL_BIN)  $(PKG_BUILD_DIR)/ww_engine $(1)/bin/ww_engine
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/ww_engine.conf $(1)/etc/ww_engine.conf
+	$(INSTALL_BIN)  $(PKG_BUILD_DIR)/sniffer $(1)/etc/init.d/sniffer
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))

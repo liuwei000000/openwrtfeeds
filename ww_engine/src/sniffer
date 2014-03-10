@@ -1,0 +1,26 @@
+#!/bin/sh
+
+DTTERM=`ps | grep ww_engine | grep -v grep | wc -l`
+
+start() {
+    if [ $DTTERM -eq 0 ]; then
+    	ww_engine&
+    else
+    	echo "sniffer is running"
+    fi
+}
+
+stop() {
+    killall ww_engine
+}
+
+case "$1" in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+esac
+
+	

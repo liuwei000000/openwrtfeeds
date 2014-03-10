@@ -2,8 +2,9 @@
 #include "check.h"
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
-//#define DEBUG(a...)  fprintf(stderr, ##a);
+//#define DEBUG(a...)  fprintf(stdout, ##a);
 #define DEBUG(a...)             //
 #define ERROR(a...)    fprintf(stderr, ##a)
 
@@ -268,14 +269,14 @@ void Check::parse_http(const char *data, size_t len)
         l = 0;
     }
 
-    //char a[1024];
-    //memcpy(a, host.ptr, host.len);
-    //a[host.len] = '\0';
-    //printf("host: %s\n", a);
-    //memcpy(a, user_agent.ptr, user_agent.len);
-    //a[user_agent.len] = '\0';
-    //printf("user agent: %s\n", a);
-    //printf("#####################\n");
+    char a[1024];
+    memcpy(a, host.ptr, host.len);
+    a[host.len] = '\0';
+    DEBUG("host: %s\n", a);
+    memcpy(a, user_agent.ptr, user_agent.len);
+    a[user_agent.len] = '\0';
+    DEBUG("user agent: %s\n", a);
+    DEBUG("#####################\n");
 }
 
 void Check::process(char *source, char *dest)
@@ -302,11 +303,15 @@ void Check::process(char *source, char *dest)
         }
         //命中
         if ( rules[i].out_sec != t / (time_t)frequency) {
+            DEBUG("Match Print");
             rules[i].out_sec = t / (time_t)frequency;
-            printf("%s  |Count:%d | src: %s, des %s \n", rules[i].log.c_str(),
-                    rules[i].count, source, dest);
+            log << t << " | "
+                << rules[i].log << " | Count: " <<  rules[i].count
+                << " | src: " << source << ", des: " << dest << endl;
+
             rules[i].count = 1;
         } else {
+            DEBUG("Match count++");
             rules[i].count++;
         }
     }

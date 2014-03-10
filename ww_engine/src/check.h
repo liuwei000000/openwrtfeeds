@@ -46,6 +46,7 @@ class Check {
             content_length.ptr = NULL;
             cookie.ptr = NULL;
             sessione_type.ptr = NULL;
+            log.open( "/tmp/data/sniffer.log", iostream::app);
         };
         ~Check() {};
         bool init_conf();
@@ -54,6 +55,7 @@ class Check {
         bool process_http(ptr_string& http_header, const string &type, vector<rule_item>& item);
 
     private:
+        ofstream                        log;
         vector<rule>                    rules;
 
         int                             frequency;

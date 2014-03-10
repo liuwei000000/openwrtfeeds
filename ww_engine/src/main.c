@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include "nids.h"
 
-//#define DEBUG(a...) fprintf(stderr, ##a);
+//#define DEBUG(a...) fprintf(stdout, ##a);
 #define DEBUG(a...)             //
 #define int_ntoa(x)	inet_ntoa(*((struct in_addr *)&x))
 extern int check_init();
