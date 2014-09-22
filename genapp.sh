@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Generate HiWiFi App tarball from current directory.
+# Generate Hi-Wi-Fi App tarball from current directory.
 
 generate_app()
 {
