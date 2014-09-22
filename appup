@@ -1,0 +1,62 @@
+#!/bin/sh
+
+# Upload App scripts and files to your router's /root
+# directory for testing before submiting it.
+#
+# Usage:
+# 1. 'cd' to the directory (<app_src>) of your App source code;
+# 2. creating a directory /root/<app_src> on your router;
+#
+
+up_current_dir()
+{
+	local cwd=`pwd`
+	local cwd_name=`basename "$cwd"`
+	local uploadfiles=""
+	local tarfiles=""
+
+	local file
+	for file in *; do
+		if [ -f "$file" ]; then
+			case "$file" in
+				*.tar.gz|*.tgz) : ;;  # ignore other tarballs
+				*) uploadfiles="$uploadfiles$file ";;
+			esac
+		elif [ -d "$file" ]; then
+			echo "Creating $file.tar.gz for $file/ ..."
+			( cd "$file"; tar zcf ../"$file".tar.gz --exclude-vcs * )
+			uploadfiles="$uploadfiles$file.tar.gz "
+			tarfiles="$tarfiles$file.tar.gz "
+		fi
+	done
+
+	if ( set -x; scp "$@" $uploadfiles root@192.168.199.1:$cwd_name/ ); then
+	cat <<EOF
+
+
+( . script; uninstall )
+
+( . script; install )
+
+( . script; start )
+
+
+EOF
+	fi
+
+	[ -n "$tarfiles" ] && rm -f $tarfiles
+	return 0
+}
+
+up_authorized_keys()
+{
+	set -x
+	scp "$@" ~/authorized_keys root@192.168.199.1:/etc/dropbear/
+}
+
+#
+case "$1" in
+	a) shift 1; up_authorized_keys "$@";;
+	*) up_current_dir "$@";;
+esac
+
